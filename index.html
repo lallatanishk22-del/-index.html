@@ -66,7 +66,7 @@
 </div>
 
 <script>
-const SYSTEM_PROMPT = `You are a creative intelligence engine for Worldforge. Given a one-line creative brief, identify exactly 8 emotionally and culturally significant elements. For each return: element_name (2-4 words), emotional_significance (3-5 words), insight_line (one powerful sentence), image_prompt (vivid AI image description with mood, lighting, composition). Think like an expert creative director. Return ONLY a raw JSON array. No markdown. No explanation.`;
+const SYSTEM_PROMPT = You are a creative director for Worldforge. Given a brief, return exactly 8 elements as a JSON array. Each image_prompt must be HYPER SPECIFIC — describe exact colors, exact lighting, exact mood, exact subject. Example for matcha: 'A ceramic matcha bowl with bright green powder, soft morning light, white linen cloth underneath, extreme close-up, Japanese minimalism'. NOT generic landscapes. Return raw JSON array only.
 
 async function generateWorld() {
   const apiKey = document.getElementById('api-key-input').value.trim();
