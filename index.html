@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Worldforge</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0a0a; color: #f0ece4; font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+  .hero { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 40px 20px; text-align: center; }
+  .logo { font-family: 'Cormorant Garamond', serif; font-size: 13px; letter-spacing: 6px; text-transform: uppercase; color: #b8a882; margin-bottom: 60px; }
+  .headline { font-family: 'Cormorant Garamond', serif; font-size: clamp(36px, 6vw, 72px); font-weight: 300; line-height: 1.1; margin-bottom: 16px; }
+  .subline { font-size: 14px; font-weight: 300; color: #7a7060; letter-spacing: 1px; margin-bottom: 52px; }
+  .input-group { width: 100%; max-width: 640px; display: flex; flex-direction: column; gap: 12px; }
+  .api-label { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #5a5550; text-align: left; }
+  input { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 16px 20px; color: #f0ece4; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 300; outline: none; transition: border-color 0.3s; }
+  input::placeholder { color: #4a4640; }
+  input:focus { border-color: rgba(184,168,130,0.4); }
+  .brief-row { display: flex; gap: 12px; }
+  .brief-row input { flex: 1; }
+  button { background: #b8a882; border: none; border-radius: 4px; padding: 16px 28px; color: #0a0a0a; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; transition: background 0.3s; white-space: nowrap; }
+  button:hover { background: #cfc0a0; }
+  button:disabled { background: #3a3530; color: #6a6560; cursor: not-allowed; }
+  .status { margin-top: 24px; font-size: 13px; color: #7a7060; letter-spacing: 1px; min-height: 20px; }
+  #board { display: none; padding: 80px 40px; max-width: 1400px; margin: 0 auto; }
+  .board-header { text-align: center; margin-bottom: 60px; }
+  .board-brief { font-family: 'Cormorant Garamond', serif; font-size: 13px; letter-spacing: 4px; text-transform: uppercase; color: #b8a882; margin-bottom: 12px; }
+  .board-title { font-family: 'Cormorant Garamond', serif; font-size: clamp(28px, 4vw, 48px); font-weight: 300; color: #f0ece4; }
+  .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; }
+  .card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 8px; overflow: hidden; opacity: 0; animation: cardIn 0.6s ease forwards; }
+  .card img { width: 100%; height: 220px; object-fit: cover; display: block; background: #1a1a1a; }
+  .card-body { padding: 24px; }
+  .card-name { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 600; color: #f0ece4; margin-bottom: 10px; }
+  .card-insight { font-size: 13px; font-weight: 300; color: #8a8070; line-height: 1.7; }
+  .card-significance { margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.06); font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #b8a882; }
+  .new-brief-btn { display: block; margin: 60px auto 0; background: transparent; border: 1px solid rgba(184,168,130,0.3); color: #b8a882; padding: 14px 32px; }
+  @keyframes cardIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+
+<div class="hero" id="hero">
+  <div class="logo">Worldforge</div>
+  <h1 class="headline">One brief.<br>One world.</h1>
+  <p class="subline">Type a creative brief. Get an immersive world.</p>
+
+  <div class="input-group">
+    <p class="api-label">Your Groq API Key</p>
+    <input type="password" id="api-key-input" placeholder="Paste your Groq API key here (gsk_...)" />
+    <div class="brief-row">
+      <input type="text" id="brief-input" placeholder="Japanese matcha brand, premium and calm..." />
+      <button id="generate-btn" onclick="generateWorld()">Generate</button>
+    </div>
+  </div>
+  <p class="status" id="status"></p>
+</div>
+
+<div id="board">
+  <div class="board-header">
+    <div class="board-brief">Creative World for</div>
+    <div class="board-title" id="board-title"></div>
+  </div>
+  <div class="cards-grid" id="cards-grid"></div>
+  <button class="new-brief-btn" onclick="newBrief()">← New Brief</button>
+</div>
+
+<script>
+const SYSTEM_PROMPT = `You are a creative intelligence engine for Worldforge. Given a one-line creative brief, identify exactly 8 emotionally and culturally significant elements. For each return: element_name (2-4 words), emotional_significance (3-5 words), insight_line (one powerful sentence), image_prompt (vivid AI image description with mood, lighting, composition). Think like an expert creative director. Return ONLY a raw JSON array. No markdown. No explanation.`;
+
+async function generateWorld() {
+  const apiKey = document.getElementById('api-key-input').value.trim();
+  const brief = document.getElementById('brief-input').value.trim();
+  if (!apiKey) { document.getElementById('status').textContent = 'Please enter your Groq API key.'; return; }
+  if (!brief) { document.getElementById('status').textContent = 'Please enter a creative brief.'; return; }
+
+  const btn = document.getElementById('generate-btn');
+  btn.disabled = true;
+  btn.textContent = 'Generating...';
+  document.getElementById('status').textContent = 'Building your world...';
+
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 2000,
+        messages: [{ role: 'system', content: SYSTEM_PROMPT }, { role: 'user', content: brief }]
+      })
+    });
+    const data = await res.json();
+    let raw = data.choices[0].message.content.replace(/```json/g,'').replace(/```/g,'').trim();
+    const parsed = JSON.parse(raw);
+    const elements = parsed.elements || parsed;
+    renderBoard(brief, elements);
+  } catch(e) {
+    document.getElementById('status').textContent = 'Error. Check your API key and try again.';
+    btn.disabled = false;
+    btn.textContent = 'Generate';
+  }
+}
+
+function renderBoard(brief, elements) {
+  document.getElementById('hero').style.display = 'none';
+  document.getElementById('board').style.display = 'block';
+  document.getElementById('board-title').textContent = brief;
+  const grid = document.getElementById('cards-grid');
+  grid.innerHTML = '';
+  elements.forEach(function(el, i) {
+    const imgUrl = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(el.image_prompt) + '?width=600&height=440&nologo=true';
+    const fallback = 'https://picsum.photos/seed/' + encodeURIComponent(el.element_name) + '/600/440';
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.animationDelay = (i * 0.1) + 's';
+    card.innerHTML = '<img src="' + imgUrl + '" onerror="this.onerror=null;this.src=\'' + fallback + '\'"><div class="card-body"><div class="card-name">' + el.element_name + '</div><div class="card-insight">' + el.insight_line + '</div><div class="card-significance">' + el.emotional_significance + '</div></div>';
+    grid.appendChild(card);
+  });
+}
+
+function newBrief() {
+  document.getElementById('hero').style.display = 'flex';
+  document.getElementById('board').style.display = 'none';
+  document.getElementById('brief-input').value = '';
+  document.getElementById('generate-btn').disabled = false;
+  document.getElementById('generate-btn').textContent = 'Generate';
+  document.getElementById('status').textContent = '';
+}
+
+document.getElementById('brief-input').addEventListener('keydown', function(e) { if (e.key === 'Enter') generateWorld(); });
+</script>
+</body>
+</html>
